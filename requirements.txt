@@ -9,3 +9,4 @@ transformers==4.46.3
 sentence-transformers==3.4.1
 pymupdf
 anthropic
+streamlit
