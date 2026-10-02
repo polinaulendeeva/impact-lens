@@ -111,4 +111,49 @@ There are 20 companies with one report each, so nothing here is statistically so
 
 ## Next
 
-I'm labelling about 40 company and theme pairs by hand, so I can measure the model against my own judgement and test a second prompt against the first. After that comes a review screen for approving or correcting assessments, then portfolio exposure by theme, tests and a cloud deployment.
+I've labelled 40 company and theme pairs to measure the model against. I set the scoring thresholds and the labels are my judgement. I used an AI assistant for a first draft and checked the difficult ones against the reports. They weren't blind, because I had already seen the model's output when I labelled them. The next step is an eval script that compares the model with these labels, and a second prompt tested against the first. After that comes a review screen for approving or correcting assessments, then portfolio exposure by theme, tests and a cloud deployment.
+
+
+## How the gold labels were made
+
+I fixed the scale to rough revenue shares first: 3 is about two thirds of revenue or more, 2 is a main business line, 1 is a real activity under about a fifth, 0 is nothing meaningful. An AI assistant drafted the 40 labels. I then checked the hard ones against the reports and changed one. The labels weren't blind, since I'd seen the model's scores by then. A cleaner test would use labels written before any model run, ideally by someone else.
+
+Page numbers are positions in the PDF, which is what my pipeline stores. In Veolia's report each PDF page is a double-page spread, so PDF page 9 shows printed page 15.
+
+### Hard calls I could verify
+
+- **Veolia, water: 2.** Water is 39.9% of revenue (page 9). It's the largest of three activities but well short of two thirds, so not a 3.
+- **Veolia, clean energy: 2.** Energy, mostly district heating and bioenergy, is 25.4% of revenue (page 9).
+- **Novonesis, health: 1.** Human Health is 26% of the Food & Health division, which is 45% of sales. That makes it about 12% of the group (pages 8 and 26).
+- **Novonesis, sustainable food: 2.** Food & Beverages is 74% of the same division, about a third of the group, and agriculture sits in the other division (page 8).
+- **Novonesis, water: 0.** I had this at 1 and changed it. The report only mentions wastewater at its own factories (pages 58 and 72). I found no water product line.
+- **Siemens, health: 2.** Healthineers is consolidated, "with Siemens as majority shareholder" (page 4). The report doesn't give its share of revenue.
+
+### Hard calls I couldn't verify from my documents
+
+- **Siemens, clean energy: 2.** No segment split in the report. 69.2% of revenue is EU Taxonomy-eligible and 29.3% is aligned (page 19), which supports "material" but isn't a segment figure.
+- **ABB, clean energy: 2.** No segment split. 45% of turnover is Taxonomy-eligible and 1% aligned (pages 142 and 143). The report points to Note 23 of the Financial Report for revenue by business area (page 25).
+- **ABB, water: 1.** Nothing in the report either way. This label rests on what I know of ABB's end markets.
+- **Schneider, clean energy: 3.** The report names two businesses, Energy Management and Industrial Automation, without a split (page 32). 89% of revenue is Taxonomy-eligible and 32% aligned (page 106). I believe energy management is most of revenue but couldn't confirm it here.
+- **Philip Morris, health: 0.** Smoke-free products reduce harm from its own product and don't treat disease. Its wellness and healthcare business is mentioned without a figure (pages 2 and 25), so I can't tell if it's big enough for a 1.
+
+### Hard calls I haven't checked yet
+
+- **Danone and Nestlé, water: 0.** I treated bottled water as a drink, not as water supply or treatment. If selling water counted as "supply", both would go up. I applied the same rule to both.
+- **Geberit, water: 2.** Piping and water-saving flushing fit the theme. Bathroom ceramics and furniture don't, in my view, and that keeps it from a 3.
+- **Danone, sustainable food: 2, against Nestlé and Unilever: 1.** I scored Danone higher because its portfolio is built around dairy, plant-based and specialised nutrition. I'm not certain the gap is justified.
+- **ExxonMobil, clean energy: 0, against Shell: 1.** Shell generates renewable power and runs EV charging. I don't believe Exxon does either at any scale.
+
+### Measured against my own labels
+
+I labelled 40 of the harder pairs by hand and compared two prompt versions.
+
+| | Prompt v1 | Prompt v2 |
+| --- | --- | --- |
+| Passed guardrails | 32 of 40 | 35 of 40 |
+| Exact match with my score | 53% | 57% |
+| Within one point | 91% | 94% |
+| Average difference (model minus me) | +0.31 | +0.14 |
+
+The second prompt cut rejections and made the model less generous, but exact agreement hardly changed. The model still gives the top score too easily, and it says "high confidence" almost every time, right or wrong. I tuned v2 on the same 40 pairs, so the gain is an upper bound. The labels were drafted with an AI assistant and checked by me against the reports, and they weren't blind.
+

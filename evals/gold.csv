@@ -1,0 +1,41 @@
+company,theme,expected_score,note
+ABB,CLEAN_ENERGY,2,Electrification and efficient motors are main lines but automation is not clean energy. Share not verified as report has no segment data
+ABB,WATER,1,Sells drives and automation to water utilities as a small end market. Not verified as report has no segment data
+Danone,HEALTH,1,Medical nutrition is a real but small part and is not medicine
+Danone,SUSTAINABLE_FOOD,2,Dairy and plant-based and specialised nutrition are positioned on health
+Danone,WATER,0,Bottled water is a beverage and not water supply or treatment
+ExxonMobil,CLEAN_ENERGY,0,Low carbon projects are negligible next to oil and gas
+ExxonMobil,SUSTAINABLE_FOOD,0,No food business
+ExxonMobil,WATER,0,No water business
+Geberit,CLEAN_ENERGY,0,No energy products
+Geberit,WATER,2,Piping and water-saving flushing fit but bathroom ceramics and furniture do not
+LVMH,CLEAN_ENERGY,0,Luxury goods
+LVMH,HEALTH,0,Luxury goods
+Nestle,HEALTH,1,Health Science is a small division
+Nestle,SUSTAINABLE_FOOD,1,Mainstream food company with some nutrition and plant-based lines
+Nestle,WATER,0,Bottled water is a beverage and not water supply or treatment
+Novo Nordisk,HEALTH,3,Only sells medicines
+Novo Nordisk,SUSTAINABLE_FOOD,0,No food business
+Novonesis,HEALTH,1,Human Health is about 12 percent of group sales
+Novonesis,SUSTAINABLE_FOOD,2,Food and Beverages is about a third of group sales plus agriculture in the other division
+Novonesis,WATER,0,No water product line found. Wastewater is mentioned only for its own factories
+Orsted,CLEAN_ENERGY,3,Almost entirely renewable power generation
+Orsted,WATER,0,No water business
+Philip Morris International,HEALTH,0,Smoke-free products reduce harm from its own product and do not treat disease. Wellness business size not verified
+Richemont,WATER,0,Luxury goods
+Roche,HEALTH,3,Pharmaceuticals and diagnostics only
+Roche,WATER,0,No water business
+Ryanair,CLEAN_ENERGY,0,Airline that buys fuel and sells no energy products
+Schneider Electric,CLEAN_ENERGY,3,Energy management and electrification are most of the business. Share not verified as report has no segment data
+Schneider Electric,WATER,1,Water and wastewater is one small end market. Not verified as report has no segment data
+Shell,CLEAN_ENERGY,1,Renewables and charging exist but are small next to oil and gas
+Siemens,CLEAN_ENERGY,2,Smart Infrastructure covers grid and building efficiency as one of several main lines. Share not verified as report has no segment data
+Siemens,HEALTH,2,Healthineers is consolidated with Siemens as majority shareholder. Share not verified as report has no segment data
+Unilever,HEALTH,0,Supplements are
+Unilever,SUSTAINABLE_FOOD,1,Foods is one division and mostly mainstream products
+Veolia Environnement,CLEAN_ENERGY,2,Energy is 25.4 percent of revenue
+Veolia Environnement,WATER,2,Water is 39.9 percent of revenue which is the largest of three lines but not most
+Vestas Wind Systems,CLEAN_ENERGY,3,Only makes and services wind turbines
+Vestas Wind Systems,WATER,0,No water business
+Xylem,CLEAN_ENERGY,0,Water technology company
+Xylem,WATER,3,Pumps and treatment and metering are the whole business

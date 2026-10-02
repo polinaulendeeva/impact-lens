@@ -11,7 +11,7 @@ from app.db import SessionLocal
 from app.models import Company, Theme
 from app.settings import settings
 
-PROMPT_VERSION = "v1"
+PROMPT_VERSION = "v2"
 SYSTEM_PROMPT = (Path(__file__).parent / "prompts" / f"{PROMPT_VERSION}.md").read_text(encoding="utf-8")
 client = anthropic.Anthropic(api_key=settings.llm_api_key)
 
