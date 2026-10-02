@@ -1,147 +1,108 @@
 # Impact Lens
 
-Impact Lens scores listed companies against impact investing themes, using only what the companies say in their own annual and sustainability reports. Each score has to point to the page it came from. If a quote or a figure doesn't match the source, the answer is thrown out. A person then approves, corrects or rejects what's left.
+Impact Lens reads company annual and sustainability reports and estimates how much of each company's business contributes to four impact themes: clean energy, water, health and sustainable food. A language model drafts each assessment with quotes from the report, automatic checks reject drafts that can't be backed up, and a person reviews what is left. Only reviewed scores count towards the portfolio figures.
 
-I started this because I wanted to understand how an LLM-based assessment tool works from the database up, and where it goes wrong. The second part turned out to be the more interesting one.
-
-It isn't finished. The database, the document pipeline, the assessment step, the guardrails, an evaluation against my own labels and a review screen all work. Portfolio analytics, tests and a cloud deployment don't exist yet.
+I built it to learn how to put a language model inside a process where the output has to be traceable and someone has to sign it off. It is a personal project on public reports and a made-up portfolio, not investment research.
 
 ## How it works
 
-```mermaid
-flowchart LR
-    A[Company reports<br/>20 PDFs] --> B[Ingest<br/>parse, chunk, embed]
-    B --> C[(PostgreSQL<br/>+ pgvector)]
-    C --> D[Retrieve<br/>top 8 passages]
-    D --> E[LLM assessment<br/>score + citations]
-    E --> F{Guardrails}
-    F -- pass --> G[Stored]
-    F -- fail --> H[Logged,<br/>not stored]
-    G --> I[Human review<br/>approve, edit, reject]
-    H --> I
-```
+1. Ingestion. Each PDF is split into pages, cut into overlapping chunks of about 300 words, embedded with a small local model (BAAI/bge-small-en-v1.5) and stored in PostgreSQL with pgvector. Loading is idempotent: a file's hash is checked first, so running it twice changes nothing.
+2. Retrieval. For a company and a theme, the eight most relevant chunks are pulled from that company's report.
+3. Assessment. Claude Haiku gets the theme definition and the eight passages, and has to answer through a fixed schema: a score from 0 to 3, a revenue share if the report states one, a rationale, and citations with exact quotes. The prompt is a versioned file, and the model name and prompt version are stored with every assessment.
+4. Guardrails. Before anything is saved, code checks that every cited chunk was actually retrieved, that every quote appears in that chunk word for word, that any revenue percentage appears in the quoted text, and that the score and the "insufficient evidence" flag don't contradict each other. A draft that fails is rejected and logged with the reason.
+5. Review. A Streamlit screen shows each assessment next to its passages. The reviewer approves, edits or rejects, and gives a reason. Assessments and reviews are append-only, so the model's original score is never overwritten.
+6. Exposure. SQL views take the latest reviewed score per company and theme and weight it by the portfolio holding. Every figure is shown with the share of the portfolio it covers.
 
-Each report is read page by page and cut into passages of about 300 words, which keep their page number. A small embedding model on my laptop turns every passage into a vector, and all of it goes into PostgreSQL.
+The score scale: 3 means about two thirds of revenue or more, 2 means a main business line, 1 means real but small, 0 means nothing meaningful.
 
-To assess a company on a theme, I pull the eight passages closest in meaning to the theme definition and hand them to the model with a fixed, versioned prompt. It returns a score from 0 (no exposure) to 3 (core business), a short rationale, and a citation with an exact quote for each claim. If the passages don't support a score, it's supposed to say so.
+## Results
 
-The answer is checked before anything is saved. What passes goes to a review screen, where a person makes the final call.
+20 companies, 20 reports, 8,328 chunks, 80 company and theme pairs.
 
-## What gets checked
+With the second prompt version, 74 assessments passed the guardrails and 6 were rejected, mostly because a quote did not match the source text.
 
-| Check | What it catches |
-| --- | --- |
-| Schema | The answer has the wrong shape or a value out of range. It gets one retry |
-| Citation exists | The model cites a passage it was never given |
-| Quote matches | The quote isn't in the cited passage |
-| No evidence, no claim | A score above 0 without a single valid citation |
-| Revenue share supported | A percentage that isn't written in a cited passage |
-| Injection | Passage text that reads like an instruction to the model. Flagged only |
-
-## What I found
-
-I ran 20 companies against 4 themes, so 80 assessments, with Claude Haiku 4.5. The 20 reports came to 8,328 passages.
-
-### The first run
-
-With the first prompt, 72 assessments were stored and 8 were rejected. Six of the rejections were altered quotes. Three were a revenue share the source doesn't state. One answer managed both.
-
-Ten percent rejected sounds fine until you look at which ones. All 8 were cases where the company really does have exposure to the theme. Most of the 80 are easy zeros, like a tobacco company on clean energy. Of the 27 that aren't, about 30% were rejected.
-
-The Shell result is the one I keep coming back to. On clean energy the model gave a score of 2, high confidence, and a revenue share of 15%. The citations were real. But the 15% came from a chart of energy delivered by volume, which isn't revenue, and it treated all power sales as clean. It read well and the main number was wrong.
-
-### Measured against my own labels
-
-I labelled 40 of the harder pairs by hand and compared two prompt versions. The second ties the scale to revenue share, excludes the company's own operations, and demands exact quotes.
+I labelled 40 pairs by hand as a gold set and compared:
 
 | | Prompt v1 | Prompt v2 |
-| --- | --- | --- |
-| Passed guardrails | 32 of 40 | 35 of 40 |
-| Exact match with my score | 53% | 57% |
+|---|---|---|
+| Answered (passed guardrails) | 32 of 40 | 35 of 40 |
+| Exact score | 53% | 57% |
 | Within one point | 91% | 94% |
-| Average difference (model minus me) | +0.31 | +0.14 |
+| Average bias | +0.31 | +0.14 |
 
-The second prompt cut rejections and made the model less generous. It stopped giving a 1 to anything that merely touched a theme. Exact agreement hardly changed, and three more matches out of 40 is within the noise. The model still gives the top score too easily. It also says "high confidence" almost every time, right or wrong, so confidence can't be used to decide which answers a person should look at first.
+The model is usually close and rarely exact. It tends to score too high, and the second prompt halved that. Its confidence rating tells me very little: high-confidence answers were right 58% of the time, about the same as the rest.
 
-Some caveats. The 40 pairs are deliberately hard, so accuracy across all 80 would be higher. I tuned v2 on the same 40, which makes the gain an upper bound. The labels were drafted with an AI assistant and checked by me against the reports, and they weren't blind, because I'd already seen the model's answers.
+I reviewed all 74 stored assessments: 15 edits, 7 individual approvals and 52 bulk approvals of zero scores after reading the list for missed exposure.
 
-### A data problem I found late
+Portfolio exposure after review:
 
-Checking my labels against the reports, I noticed that several of my files are sustainability statements, not annual reports. ABB, Siemens, Schneider and Philip Morris have no revenue by segment in them, and that's the main evidence my prompt asks for. The model was scoring those companies on narrative alone. It gave Siemens a 0 on clean energy, which I don't think any analyst would. A better prompt can't fix missing data. I should have checked the document type when I collected the files.
+| Theme | Reviewed | Model only | Portfolio covered |
+|---|---|---|---|
+| Clean energy | 27.3% | 27.3% | 93% |
+| Health | 23.7% | 25.7% | 97% |
+| Water | 17.0% | 22.3% | 80% |
+| Sustainable food | 10.3% | 11.0% | 98% |
 
-## The review screen
+The clean energy figure did not move, but four scores behind it did. The corrections happened to cancel out, which is a good reason not to judge the model on the total alone.
 
-A small Streamlit app shows each assessment with its score, rationale and citations. Every citation opens to the full passage, so the reviewer can check the evidence without opening the PDF. The reviewer approves, edits or rejects, and has to give a reason for an edit or a rejection. Each decision is a new row with a name and a time. A second tab lists everything the guardrails rejected.
+## What is wrong with it
 
-The name field stands in for a real login. In a bank this would be single sign-on with roles.
+The labels are mine, drafted with AI help and not done blind, and I tuned the second prompt on the same 40 pairs I measured it on. The numbers above are optimistic for that reason.
 
-## Built with
+For at least four companies (ABB, Siemens, Schneider Electric, Philip Morris International) I loaded a sustainability report that has no revenue by segment, so neither the model nor I could verify the share. They need the financial report. I have not checked the other fourteen documents for the same problem.
 
-- Python 3.12
-- PostgreSQL 16 with pgvector, in Docker
-- SQLAlchemy 2 and Alembic
-- PyMuPDF for reading PDFs
-- sentence-transformers (bge-small-en-v1.5), run locally
-- Anthropic API, with Pydantic to validate the answers
-- Streamlit for the review screen
+Rejected assessments currently just drop out of the exposure figure. That is why water covers only 80% of the portfolio. They should go to a person for a manual assessment.
+
+The API has no authentication.
 
 ## Running it
 
-You need Docker, Python 3.12 and an Anthropic API key.
+You need Python 3.12, Docker and an Anthropic API key.
 
 ```bash
-git clone <this repo>
+git clone https://github.com/polinaulendeeva/impact-lens.git
 cd impact-lens
 python3.12 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-
-cp .env.example .env          # then put your API key in .env
-docker compose up -d          # database on port 5433
-alembic upgrade head          # create the tables
-python -m app.seed            # companies, themes, demo portfolio
+cp .env.example .env        # then put your API key in .env
+docker compose up -d
+python -m alembic upgrade head
+python -m app.seed
 ```
 
-The reports aren't in this repository because they belong to the companies. `data/sources.csv` lists each one with its URL. Download them into `data/raw/` under the filenames given there, then:
+The reports are not in the repository. `data/sources.csv` lists where each one came from. Download them into `data/raw/` and then:
 
 ```bash
-python -m ingest.run                      # parse, chunk, embed and load
-python -m ingest.quality                  # data quality report
-python -m agent.run_all                   # assess every company and theme
-python -m evals.run_evals v2              # compare with the labels in evals/gold.csv
-streamlit run review_ui/streamlit_app.py  # open the review screen
+python -m ingest.run            # parse, chunk, embed, load
+python -m ingest.quality        # data quality checks
+python -m agent.run_all         # assess every company and theme
+python -m evals.run_evals v2    # compare with the gold set
+streamlit run review_ui/streamlit_app.py
+python -m analytics.apply       # create the exposure views
+python -m uvicorn api.main:app  # API, docs at /docs
 ```
 
-To try a single pair and see the output:
+Tests and linting:
 
 ```bash
-python -m agent.assess "Vestas Wind Systems" CLEAN_ENERGY
+python -m ruff check .
+python -m pytest -q
 ```
 
-I pinned the library versions for an Intel Mac, where PyTorch stops at 2.2. On newer hardware you can loosen them.
+Both run on every push through GitHub Actions. The tests cover the guardrails and the chunking and don't call the model or the database.
 
-Page numbers in citations are positions in the PDF file. They usually match the printed page, but not always: Veolia's report is laid out in double-page spreads.
+## Layout
 
-## Where things are
+- `app/` settings, database connection, tables, seed data
+- `ingest/` PDF parsing, chunking, embedding, quality checks
+- `agent/` retrieval, prompts, schema, guardrails, the full run
+- `evals/` gold set, evaluation script, results per prompt version
+- `review_ui/` the review screen
+- `analytics/` SQL views for current assessments and exposure
+- `api/` read-only FastAPI service
+- `tests/` unit tests
+- `DECISIONS.md` why I made the choices I made, and what went wrong along the way
 
-```
-app/          settings, database connection, table definitions, seed data
-ingest/       PDF parsing, chunking, embeddings, loader, quality checks
-agent/        retrieval, prompts (v1, v2), assessment call, guardrails, full run
-evals/        my labels (gold.csv), the eval script, results per prompt version
-review_ui/    the Streamlit review screen
-migrations/   schema history (Alembic)
-data/         sources.csv is committed, the PDFs in raw/ are not
-DECISIONS.md  why I built it this way, and what went wrong
-```
+## Stack
 
-## Why it's built this way
-
-[DECISIONS.md](DECISIONS.md) has the full reasoning. The short version: nothing is overwritten, so there's a record of what the model said and what a reviewer changed. Each assessment stores the model, the prompt version and the passages it cited, which is why v1 and v2 results sit side by side in the same table. The database enforces the valid values. Loading can be rerun safely. And I only use the companies' own reports, with no outside ESG ratings.
-
-## What it can't do yet
-
-There are 20 companies with one report each, and 40 labelled pairs, so nothing here is statistically solid. Some companies have the wrong kind of report. The model gives the top score too easily and its confidence means nothing. Charts flattened into text can be misread, as Shell showed. Review decisions are stored but don't yet feed back into the labels or into any portfolio figure.
-
-## Next
-
-First I want to add financial reports for the companies whose files have no segment data, and rerun. Then try a larger model on the same 40 pairs, since Haiku ignored a couple of explicit rules. After that: portfolio exposure by theme from approved assessments only, tests, and a cloud deployment.
+Python 3.12, PostgreSQL 16 with pgvector, SQLAlchemy, Alembic, Pydantic, PyMuPDF, sentence-transformers, the Anthropic API, Streamlit, FastAPI, pytest, ruff, Docker, GitHub Actions.
