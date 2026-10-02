@@ -65,5 +65,19 @@ I fixed the scale to rough revenue shares first: 3 is about two thirds of revenu
 
 **Prompt v2 against v1.** I tied the scale to revenue share, excluded the company's own operations, required exact single-span quotes and banned computed percentages. On the same 40 pairs, rejections fell from 8 to 5 and the model's generosity halved (average difference +0.31 to +0.14). The "1 for anything that touches the theme" problem mostly disappeared. Exact agreement barely moved: 53% to 57% of answered pairs, which is within the noise for 40 cases and for a model whose answers vary between runs. It still gives 3 too easily, still reports high confidence almost every time, and still computed a revenue share for Ørsted. I tuned v2 on the same set I measured it on, so even this gain is an upper bound. What's left looks like a data problem (missing segment figures), a model-size question and my own threshold choices, more than a prompt problem.
 
+**REVIEW
+
 **Duplicate review clicks.** The dropdown showed the model's score even after I had edited it, so it looked as if my decision hadn't saved and I approved Vestas three times. I changed the label to show "edited to 1" or "approved". The duplicates stay in the table; the analytics view takes the latest decision per assessment.
+
+**What review changed.** I reviewed all 74 stored assessments: the non-zero ones and five wrong zeros one by one, and 52 plain zeros in bulk after reading the list. Water exposure fell from 22.3 to 17.0. Clean energy stayed at 27.3, but only because my corrections cancelled out: ABB, Shell and ExxonMobil went down and Siemens went up by the same amount. So an aggregate can look right while four of its inputs are wrong. Coverage is 80% to 98% by theme, and every gap is an assessment a guardrail rejected. Ørsted alone is 7% of the portfolio, which means clean energy is understated until someone assesses it by hand.
+
+## The API only reads
+
+I added a small FastAPI service with three endpoints: a health check, the portfolio exposure per theme, and the current assessment for each company and theme.
+
+I left out an endpoint for submitting reviews. A review is supposed to come from someone who has read the cited passages, and the review screen makes that the only way in. If the API accepted reviews, a script could approve a hundred scores without anyone looking at the evidence, and the exposure figures would still say "approved".
+
+The endpoints read from the two SQL views and do no calculation of their own. The rule for which assessment is current and how exposure is weighted is written once, in `analytics/views.sql`, so the API, the review screen and a query in psql all give the same number.
+
+What is missing: there is no authentication, so this is fine on my laptop and not anywhere else. The API also has no tests yet, because they would need a database in CI.
 
