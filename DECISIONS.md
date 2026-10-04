@@ -32,7 +32,7 @@ The inputs are public annual and sustainability reports. I don't use third-party
 
 ## PDFs stay off GitHub
 
-The reports are the companies' copyright, so they're git-ignored. `data/sources.csv` lists company, year, title and URL for each one. Anyone rerunning the project has to download them again.
+The reports are the companies' copyright, so they're git-ignored.n (I have them now as public, so that you can run the app without having to re-download, but will delete later) `data/sources.csv` lists company, year, title and URL for each one. Anyone rerunning the project will have to download them again.
 
 ## Embeddings run on my laptop
 
